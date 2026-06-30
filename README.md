@@ -96,7 +96,7 @@ Every floating panel drags wherever you like, and they scramble back on-screen i
 <img width="611" height="263" alt="Regular" src="https://github.com/user-attachments/assets/9ad1c7f2-09e6-48ae-96e5-123e09bd840a" />
 <img width="611" height="263" alt="Settings" src="https://github.com/user-attachments/assets/7aa876c3-9d09-4f3f-a61e-c985ed2bed12" />
 <img width="611" height="263" alt="Keyboard" src="https://github.com/user-attachments/assets/87b1d87b-5387-4756-affd-407456db5e08" />
-<img width="611" height="263" alt="Settings" src="https://github.com/user-attachments/assets/6bad119e-bcc5-44f8-93fd-051f2fce78cf" />
+<img width="611" height="263" alt="SendToPC" src="https://github.com/user-attachments/assets/a69335ad-016a-4691-a45b-049934c748ba" />
 
 
 
