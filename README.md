@@ -105,11 +105,6 @@ Anything you send from a phone lands here:
 %USERPROFILE%\Downloads\RemoteDesktopLAN\
 ```
 
-## Screenshots
-
-**The login**
-<img width="1437" height="792" alt="image" src="https://github.com/user-attachments/assets/576d82aa-6668-4b88-bab6-d2a1675b4b4b" />
-
 ## Under the hood
 
 ```
