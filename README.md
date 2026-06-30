@@ -1,6 +1,6 @@
 # Remote Desktop LAN
-
 Your Windows PC, in a browser tab, driven from the couch. Or the kitchen. Or your phone in bed at 2am because you left something running. No client to install, no account to make, nothing bouncing through some company's servers in another country. It lives on your network and never leaves.
+> **Lightweight** and I found myself constantly needing a remote access solution for my PC that don't require a bunch of bloated softwares -> one .bat to setup and either one .bat to open port's or use Powershell and we are ready!
 
 Written from scratch in C# / .NET 8 with a frontend of plain HTML and JavaScript. No build step, no framework, no 400MB of node_modules. The screen streams over an encrypted WebSocket, and your phone turns into a trackpad, a keyboard, and a little pile of shortcut buttons.
 
@@ -132,8 +132,6 @@ Worth knowing up front: it runs in your normal user session, so it can't see or 
 
 ## Rough edges
 
-Every project has them. Mine just admits it.
-
 - **The capture eats CPU.** GDI plus JPEG is dead simple and drags in zero dependencies, but it isn't touching the GPU, so crank the resolution and FPS and your CPU will feel it. WGC plus H.264 is the eventual fix.
 - **The secure desktop stays secret.** UAC prompts and the lock screen come through pure black. Nothing I can do, that's the OS guarding the door.
 - **Self-signed cert.** One browser warning per device, then it leaves you alone.
@@ -141,7 +139,7 @@ Every project has them. Mine just admits it.
 - **Not internet-ready.** No reverse proxy, no fancy rate limiting, none of the armor you'd want facing the world. LAN. Only.
 - **Landscape on a small phone gets busy** if you fan out every panel at once.
 
-## Someday, maybe
+## Someday, maybe..!
 
 - Clipboard sync both directions, with a little history
 - Files going the other way, PC to phone
