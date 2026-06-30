@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>First-run setup — Remote Desktop LAN</title>
+<style>
+  :root { --bar:#16181d; --bar2:#1f232b; --line:#2c313b; --txt:#e7eaf0; --muted:#8a93a3; --accent:#3b82f6; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body { background:#000; color:var(--txt); font-family:system-ui,-apple-system,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card { width:100%; max-width:380px; background:var(--bar); border:1px solid var(--line);
+    border-radius:16px; padding:28px 24px; }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .brand .dot { width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
+  .brand h1 { font-size:18px; font-weight:600; margin:0; }
+  p.sub { color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 6px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; }
+  input { width:100%; font-size:16px; padding:12px; border-radius:10px; background:var(--bar2);
+    color:var(--txt); border:1px solid var(--line); outline:none; }
+  input:focus { border-color:var(--accent); }
+  button { width:100%; font-size:15px; font-weight:600; padding:12px; margin-top:16px; border-radius:10px;
+    background:var(--accent); color:#fff; border:none; cursor:pointer; }
+  button:active { filter:brightness(.92); }
+  #msg { margin-top:12px; min-height:18px; font-size:13px; color:var(--muted); }
+  #msg.err { color:#f87171; }
+  #msg.ok { color:#34d399; }
+  .hint { font-size:11px; color:var(--muted); margin-top:14px; text-align:center; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><span class="dot"></span><h1>Remote Desktop LAN</h1></div>
+    <p class="sub">First-run setup. Choose a strong password — at least 12 characters. It's stored only as an Argon2id hash; the plaintext is never written to disk.</p>
+    <label for="p">Admin password</label>
+    <input id="p" type="password" placeholder="At least 12 characters" autocomplete="new-password">
+    <label for="p2">Confirm password</label>
+    <input id="p2" type="password" placeholder="Re-enter password" autocomplete="new-password"
+           onkeydown="if(event.key==='Enter') go()">
+    <button onclick="go()">Create password</button>
+    <div id="msg"></div>
+    <p class="hint">After this, log in from this or another device on the same network.</p>
+  </div>
+
+<script>
+async function go() {
+  const msg = document.getElementById('msg');
+  const p = document.getElementById('p').value;
+  const p2 = document.getElementById('p2').value;
+  msg.className = '';
+
+  if (p.length < 12) { msg.textContent = 'Password must be at least 12 characters.'; msg.className = 'err'; return; }
+  if (p !== p2) { msg.textContent = 'Passwords do not match.'; msg.className = 'err'; return; }
+
+  try {
+    const r = await fetch('/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: p })
+    });
+    if (r.ok) {
+      msg.textContent = 'Done. Redirecting to login…';
+      msg.className = 'ok';
+      setTimeout(() => location.href = '/login.html', 800);
+    } else {
+      msg.textContent = 'Error: ' + (await r.text());
+      msg.className = 'err';
+    }
+  } catch (e) {
+    msg.textContent = 'Network error: ' + e.message;
+    msg.className = 'err';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+*.user
+
+# Runtime-generated secrets & data (these live in %LOCALAPPDATA% at run time,
+# but ignore any local copies too)
+certs/
+logs/
+config.json
+*.pfx
+*.pwd
+
+# IDE
+.vs/
+.idea/
+*.suo

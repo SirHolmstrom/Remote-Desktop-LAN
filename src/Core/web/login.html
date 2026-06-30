@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Login — Remote Desktop LAN</title>
+<style>
+  :root { --bar:#16181d; --bar2:#1f232b; --line:#2c313b; --txt:#e7eaf0; --muted:#8a93a3; --accent:#3b82f6; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body { background:#000; color:var(--txt); font-family:system-ui,-apple-system,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card { width:100%; max-width:360px; background:var(--bar); border:1px solid var(--line);
+    border-radius:16px; padding:28px 24px; }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .brand .dot { width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
+  .brand h1 { font-size:18px; font-weight:600; margin:0; }
+  p.sub { color:var(--muted); font-size:14px; margin:0 0 18px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+  input { width:100%; font-size:16px; padding:12px; border-radius:10px; background:var(--bar2);
+    color:var(--txt); border:1px solid var(--line); outline:none; }
+  input:focus { border-color:var(--accent); }
+  button { width:100%; font-size:15px; font-weight:600; padding:12px; margin-top:14px; border-radius:10px;
+    background:var(--accent); color:#fff; border:none; cursor:pointer; }
+  button:active { filter:brightness(.92); }
+  #msg { margin-top:12px; min-height:18px; font-size:13px; color:var(--muted); }
+  #msg.err { color:#f87171; }
+  .foot { margin-top:16px; font-size:11px; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand"><span class="dot"></span><h1>Remote Desktop LAN</h1></div>
+    <p class="sub">Enter your admin password to start a session.</p>
+    <label for="p">Password</label>
+    <input id="p" type="password" placeholder="••••••••••••" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter') login()">
+    <button onclick="login()">Log in</button>
+    <div id="msg"></div>
+    <div class="foot">LAN-only · TLS-secured</div>
+  </div>
+
+<script>
+async function login() {
+  const msg = document.getElementById('msg');
+  msg.className = '';
+  msg.textContent = 'Signing in…';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: document.getElementById('p').value })
+    });
+    if (r.ok) {
+      location.href = '/index.html';
+    } else if (r.status === 429) {
+      msg.textContent = 'Too many attempts. Locked out — retry after ' + r.headers.get('Retry-After') + 's.';
+      msg.className = 'err';
+    } else {
+      msg.textContent = 'Invalid password.';
+      msg.className = 'err';
+    }
+  } catch (e) {
+    msg.textContent = 'Network error: ' + e.message;
+    msg.className = 'err';
+  }
+}
+</script>
+</body>
+</html>
