@@ -6,7 +6,7 @@ Written from scratch in C# / .NET 8 with a frontend of plain HTML and JavaScript
 
 > **One rule: keep it on the LAN.** This is a home-and-office-network tool. I did not build it to survive the open internet, so please don't port-forward it or drop it on some sketchy network. You've been warned, and so has your PC.
 
-<img width="2560" height="1280" alt="hero" src="https://github.com/user-attachments/assets/34209bca-1e5c-49a3-bc3d-166959aa4776" />
+<img width="2560" height="1280" alt="hero (3)" src="https://github.com/user-attachments/assets/ca4ae7c9-1da7-4e1b-86bb-a74d38af507e" />
 
 ## Features
 
