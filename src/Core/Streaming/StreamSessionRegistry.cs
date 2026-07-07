@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.Versioning;
+using Core.Security;
 
 namespace Core.Streaming;
 
@@ -9,7 +10,10 @@ public sealed record ClientView(
     DateTime ConnectedUtc,
     int Fps,
     int Quality,
-    int Monitor);
+    int Monitor,
+    SessionRole Role,
+    GuestAccessLevel? GuestAccessLevel,
+    Guid? GuestInviteId);
 
 /// <summary>
 /// Tracks active stream sessions so the host (tray app) and the /api/clients
@@ -27,7 +31,8 @@ public sealed class StreamSessionRegistry
 
     public IReadOnlyList<ClientView> Snapshot() => m_Sessions.Values
         .Select(session => new ClientView(
-            session.Id, session.ClientIp, session.ConnectedUtc, session.Fps, session.Quality, session.Monitor))
+            session.Id, session.ClientIp, session.ConnectedUtc, session.Fps, session.Quality, session.Monitor,
+            session.Role, session.GuestAccessLevel, session.GuestInviteId))
         .ToList();
 
     public bool Disconnect(string id)
@@ -43,6 +48,15 @@ public sealed class StreamSessionRegistry
     public void DisconnectAll()
     {
         foreach (var session in m_Sessions.Values)
+            session.Cancel();
+    }
+
+    public int CountForGuestInvite(Guid inviteId) =>
+        m_Sessions.Values.Count(session => session.GuestInviteId == inviteId);
+
+    public void DisconnectGuestInvite(Guid inviteId)
+    {
+        foreach (var session in m_Sessions.Values.Where(session => session.GuestInviteId == inviteId))
             session.Cancel();
     }
 }

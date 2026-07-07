@@ -43,6 +43,8 @@
   #panel .seg { display:flex; gap:5px; flex:1 1 auto; }
   #panel .seg button { padding:7px 0; }
   #panel .help { font-size:11px; color:var(--muted); line-height:1.5; }
+  .permission-hidden { display:none !important; }
+  #sessionRole { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
   /* landscape: widen the panel so the action buttons pack 4-5 per row instead of
      running off the bottom (and the scroll fallback above catches anything left) */
   @media (orientation: landscape) { #panel { width:min(92vw, 560px); } }
@@ -119,7 +121,7 @@
 <body>
   <button id="gear" onclick="toggleSettings()"><span id="dot" class="dot wait"></span>⚙</button>
   <div id="panel">
-    <div class="row"><span id="dot2" class="dot wait"></span><span id="stat">connecting…</span><span id="lat">— ms</span></div>
+    <div class="row"><span id="dot2" class="dot wait"></span><span id="stat">connecting…</span><span id="sessionRole"></span><span id="lat">— ms</span></div>
     <div class="row"><span class="lbl">Monitor</span><select id="mon" onchange="setMonitor()"></select></div>
     <div class="row"><span class="lbl">Quality</span><input id="q" type="range" min="10" max="95" value="70" onchange="setQuality()"></div>
     <div class="row"><span class="lbl">FPS</span>
@@ -131,18 +133,18 @@
     </div>
     <div class="row btns actions">
       <button onclick="fs()">⛶ Full</button>
-      <button id="kbdBtn" onclick="toggleKeyboard()">⌨ Keys</button>
-      <button id="padBtn" onclick="toggleControls()">✋ Pad</button>
+      <button id="kbdBtn" data-requires="control" onclick="toggleKeyboard()">⌨ Keys</button>
+      <button id="padBtn" data-requires="control" onclick="toggleControls()">✋ Pad</button>
       <button onclick="resetZoom()">⤢ Fit</button>
-      <button id="sysBtn" onclick="toggleSysKeys()">⌃ Sys keys</button>
-      <button id="arrBtn" onclick="toggleArrows()">⇅ Arrows</button>
-      <button onclick="pickFile()">📤 Send file</button>
+      <button id="sysBtn" data-requires="system" onclick="toggleSysKeys()">⌃ Sys keys</button>
+      <button id="arrBtn" data-requires="control" onclick="toggleArrows()">⇅ Arrows</button>
+      <button id="fileBtn" data-requires="files" onclick="pickFile()">📤 Send file</button>
       <button class="danger" onclick="logout()">⏻ Disconnect</button>
     </div>
     <div class="help">drag = move cursor (lift &amp; re-place to keep going) · hold ≈1.4s = jump cursor there · pad L/R = click · Hold = pin-drag · 2 fingers = zoom &amp; pan · double-tap = fit</div>
   </div>
 
-  <div id="vkbd">
+  <div id="vkbd" data-requires="control">
     <div id="echoWrap">
       <div id="kbdEcho"></div>
       <div id="echoBtns">
@@ -154,7 +156,7 @@
     <div id="vkeys"></div>
   </div>
 
-  <div id="pad">
+  <div id="pad" data-requires="control">
     <div class="grip" id="padGrip">⠿⠿</div>
     <button id="btnL" title="Left click — tap to click, hold while dragging the screen to click-drag">L</button>
     <div class="scroll" id="scrollPad">▲<br>scroll<br>▼</div>
@@ -162,7 +164,7 @@
     <button id="btnHold" title="Pin the left button down, drag one finger to move/select, tap again to drop">Hold</button>
   </div>
 
-  <div id="syskeys" class="hidden">
+  <div id="syskeys" class="hidden" data-requires="system">
     <div class="grip" id="sysGrip">⠿⠿</div>
     <div class="skgrid">
       <button data-mod="Ctrl" onclick="sysMod('Ctrl')">Ctrl</button>
@@ -176,7 +178,7 @@
     </div>
   </div>
 
-  <div id="arrows" class="hidden">
+  <div id="arrows" class="hidden" data-requires="control">
     <div class="grip" id="arrGrip">⠿⠿</div>
     <div class="arrgrid">
       <span></span><button data-vk="38">↑</button><span></span>
@@ -186,8 +188,8 @@
 
   <div id="stage"><canvas id="screen"></canvas></div>
 
-  <input id="fileInput" type="file" style="display:none">
-  <div id="upload">
+  <input id="fileInput" data-requires="files" type="file" style="display:none">
+  <div id="upload" data-requires="files">
     <div class="box">
       <div class="title">Send to PC</div>
       <div id="uploadName" class="name">—</div>

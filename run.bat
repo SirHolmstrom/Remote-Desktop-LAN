@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Remote Desktop LAN
+title RemoteDesktopLAN launcher
 cd /d "%~dp0"
 
 REM --- Require the .NET 8 SDK ---
@@ -15,16 +15,13 @@ if errorlevel 1 (
 )
 
 echo ============================================================
-echo  Remote Desktop LAN - starting in Release
+echo  RemoteDesktopLAN - starting tray utility in Release
 echo  First run will restore packages and build (may take a bit).
-echo  The access URL prints below once it is listening.
-echo  Press Ctrl+C in this window to stop the server.
+echo  Use the notification-area icon to control the server and quit.
 echo ============================================================
 echo.
 
 dotnet run --project "src\Core" -c Release
 
 echo.
-echo Server stopped.
-pause
 endlocal

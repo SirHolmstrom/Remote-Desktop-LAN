@@ -2,6 +2,14 @@ using System.Text.Json;
 
 namespace Core.Config;
 
+public enum RemoteAccessMode
+{
+    LanOnly,
+    Automatic,
+    ManualOnly,
+    Disabled
+}
+
 /// <summary>
 /// Persisted settings. The password field stores ONLY an Argon2id hash string —
 /// never a plaintext or reversible password.
@@ -21,8 +29,19 @@ public sealed class AppConfig
     public string? PasswordHash { get; set; }
 
     public int SessionTimeoutMinutes { get; set; } = 15;
-    public bool RemoteAccessEnabled { get; set; } = true;
+    public bool RemoteAccessEnabled { get; set; } = false;
     public bool ClipboardSyncEnabled { get; set; } = false;
+    public RemoteAccessMode AccessMode { get; set; } = RemoteAccessMode.LanOnly;
+    public int ExternalPort { get; set; } = 38443;
+    public int FpsLimit { get; set; } = 30;
+    public int JpegQuality { get; set; } = 75;
+    public int GuestInviteDefaultMinutes { get; set; } = 60;
+    public bool StartWithWindows { get; set; } = false;
+    public bool StartMinimized { get; set; } = true;
+    public bool ShowTaskbarButton { get; set; } = false;
+    public bool TryAutomaticPortForwarding { get; set; } = true;
+    public string? LastRemoteUrl { get; set; }
+    public string? LastRouterUrl { get; set; }
 
     public bool IsConfigured => !string.IsNullOrEmpty(PasswordHash);
 

@@ -16,6 +16,10 @@
   .brand .dot { width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent); }
   .brand h1 { font-size:18px; font-weight:600; margin:0; }
   p.sub { color:var(--muted); font-size:14px; margin:0 0 18px; }
+  .mode { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; margin-bottom:18px;
+    border:1px solid var(--line); border-radius:12px; background:#101216; }
+  .mode button { margin:0; padding:9px; background:transparent; color:var(--muted); }
+  .mode button.active { background:var(--bar2); color:var(--txt); box-shadow:0 1px 5px rgba(0,0,0,.3); }
   label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
   input { width:100%; font-size:16px; padding:12px; border-radius:10px; background:var(--bar2);
     color:var(--txt); border:1px solid var(--line); outline:none; }
@@ -31,25 +35,55 @@
 <body>
   <div class="card">
     <div class="brand"><span class="dot"></span><h1>Remote Desktop LAN</h1></div>
-    <p class="sub">Enter your admin password to start a session.</p>
-    <label for="p">Password</label>
-    <input id="p" type="password" placeholder="••••••••••••" autocomplete="current-password"
-           onkeydown="if(event.key==='Enter') login()">
-    <button onclick="login()">Log in</button>
+    <p id="sub" class="sub">Use the permanent owner password.</p>
+    <div class="mode" role="group" aria-label="Access type">
+      <button id="loginMode" class="active" type="button" onclick="setMode('login')">Login</button>
+      <button id="guestMode" type="button" onclick="setMode('guest')">Guest</button>
+    </div>
+    <label id="credentialLabel" for="credential">Password</label>
+    <input id="credential" type="password" placeholder="Password" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter') submitLogin()">
+    <button id="submitButton" onclick="submitLogin()">Sign in</button>
     <div id="msg"></div>
     <div class="foot">LAN-only · TLS-secured</div>
   </div>
 
 <script>
-async function login() {
+let mode = 'login';
+
+function setMode(nextMode) {
+  mode = nextMode;
+  const guest = mode === 'guest';
+  document.getElementById('loginMode').classList.toggle('active', !guest);
+  document.getElementById('guestMode').classList.toggle('active', guest);
+  document.getElementById('sub').textContent = guest
+    ? 'Enter the temporary code shared by the PC owner.'
+    : 'Use the permanent owner password.';
+  const label = document.getElementById('credentialLabel');
+  const input = document.getElementById('credential');
+  label.textContent = guest ? 'Invite code' : 'Password';
+  input.type = guest ? 'text' : 'password';
+  input.placeholder = guest ? 'XXXX-XXXX' : 'Password';
+  input.autocomplete = guest ? 'one-time-code' : 'current-password';
+  input.value = '';
+  document.getElementById('submitButton').textContent = guest ? 'Connect' : 'Sign in';
   const msg = document.getElementById('msg');
+  msg.textContent = '';
+  msg.className = '';
+  input.focus();
+}
+
+async function submitLogin() {
+  const msg = document.getElementById('msg');
+  const credential = document.getElementById('credential').value;
   msg.className = '';
   msg.textContent = 'Signing in…';
   try {
-    const r = await fetch('/api/login', {
+    const guest = mode === 'guest';
+    const r = await fetch(guest ? '/api/guest-login' : '/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: document.getElementById('p').value })
+      body: JSON.stringify(guest ? { code: credential } : { password: credential })
     });
     if (r.ok) {
       location.href = '/index.html';
@@ -57,7 +91,7 @@ async function login() {
       msg.textContent = 'Too many attempts. Locked out — retry after ' + r.headers.get('Retry-After') + 's.';
       msg.className = 'err';
     } else {
-      msg.textContent = 'Invalid password.';
+      msg.textContent = guest ? 'Invalid or expired invite code.' : 'Invalid password.';
       msg.className = 'err';
     }
   } catch (e) {

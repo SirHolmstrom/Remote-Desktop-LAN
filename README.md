@@ -1,166 +1,121 @@
 # Remote Desktop LAN
-Your Windows PC, in a browser tab, driven from the couch. Or the kitchen. Or your phone in bed at 2am because you left something running. No client to install, no account to make, nothing bouncing through some company's servers in another country. It lives on your network and never leaves.
-> **Lightweight** and I found myself constantly needing a remote access solution for my PC that don't require a bunch of bloated softwares -> one .bat to setup and either one .bat to open port's or use Powershell and we are ready!
 
-Written from scratch in C# / .NET 8 with a frontend of plain HTML and JavaScript. No build step, no framework, no 400MB of node_modules. The screen streams over an encrypted WebSocket, and your phone turns into a trackpad, a keyboard, and a little pile of shortcut buttons.
+Your Windows PC in a browser tab.
 
-> **One rule: keep it on the LAN.** This is a home-and-office-network tool. I did not build it to survive the open internet, so please don't port-forward it or drop it on some sketchy network. You've been warned, and so has your PC.
+I built this because I kept needing to check something on my PC from the couch, or from my phone after realizing I had left something running. Every solution seemed to want an account, a subscription, or a mountain of software.
 
-<img width="2560" height="1280" alt="hero (3)" src="https://github.com/user-attachments/assets/ca4ae7c9-1da7-4e1b-86bb-a74d38af507e" />
+RemoteDesktopLAN is the small version: run it on the PC, open a browser, and connect. There is no client to install on the other device and nothing is relayed through somebody else's servers.
 
-## Features
+<img width="2560" height="1280" alt="RemoteDesktopLAN" src="https://github.com/user-attachments/assets/ca4ae7c9-1da7-4e1b-86bb-a74d38af507e" />
 
-- **Runs in any browser.** If it can render this century's HTML, it can be your remote. Nothing to install on the controlling side.
-- **Properly usable from a phone.** A trackpad-style cursor, a floating mouse pad, a real on-screen keyboard, and a couple of shortcut panels. You're not jabbing at 12px close buttons with your thumb.
-- **Locks itself down.** Argon2id on the password, DPAPI on the stored secrets, self-signed TLS that installs itself as trusted so the browser stops whining, sessions that expire, per-IP lockout with backoff for anyone trying to guess their way in, and an audit log that remembers.
-- **Multi-monitor.** Flip between screens without reconnecting.
-- **Tune it live.** Quality, frame rate, and which monitor, all changeable mid-session.
-- **Only sends what moved.** The screen is chopped into 128px tiles, each one hashed. If a tile didn't change, it doesn't get sent, so a still screen costs almost nothing. Every 7 seconds a full keyframe rolls through to sweep up anything stale.
-- **Every input you need.** Absolute mouse across the whole virtual desktop, scroll wheel, all three buttons, Unicode typing, modifier combos, and yes, a Ctrl+Alt+Del button.
-- **Throw a file at your PC.** Send a screenshot (or anything else) from the phone straight to the PC's Downloads.
-- **An off switch.** Kill remote access without killing the app.
+## What it does
 
-## What you'll need
+- Streams your desktop to any modern browser over HTTPS.
+- Works properly on a phone: trackpad-style mouse, keyboard, scrolling, zoom, and draggable controls.
+- Supports multiple monitors, live quality/FPS controls, and file uploads to the PC.
+- Runs quietly from the Windows tray instead of keeping a window open.
+- Uses an owner password plus optional temporary guest codes.
 
-- Windows 10 or 11. It targets `net8.0-windows` and lives on GDI, SendInput, DPAPI, and UI Automation.
-- The .NET 8 SDK to build it.
-- A browser from this decade on whatever you're controlling from.
+The tray is where most things live. Left-click opens the dashboard. Right-click lets you:
 
-## Getting it running
+- Open or copy the LAN address.
+- Open or close direct remote access.
+- Generate **Spectator**, **Control**, or **Full Access** guest codes.
+- See and revoke active codes and sessions.
+- Change stream quality and FPS.
+- Change the password, lock sessions, manage startup, open logs, or quit.
 
-Build and go:
+The tray icon also changes when somebody is actively viewing the PC, which is a small thing I ended up really liking.
+
+## Owner and guest access
+
+The normal **Login** option uses your permanent owner password.
+
+If you want to show a friend something without handing them that password, generate a guest code from the tray:
+
+- **Spectator** can only watch.
+- **Control** gets the mouse and ordinary keyboard.
+- **Full Access** also gets system keys and file transfer.
+
+Codes expire, can be revoked at any time, and disappear when the app restarts. A guest session never silently turns into an owner session; they have to disconnect and log in again with the owner password.
+
+## Running it
+
+You need Windows 10 or 11 and the .NET 8 SDK.
 
 ```bat
 run.bat
 ```
 
-Builds the project and starts the server on port 8443 over HTTPS. On first launch it mints a self-signed certificate and tucks it into your user's Trusted Root store so `wss://` connects without a fuss.
+The first run asks for an owner password of at least 12 characters. After that, use the tray icon to open the dashboard.
 
-On the same machine:
+From the PC itself:
 
 ```
 https://localhost:8443
 ```
 
-To reach it from your phone, to crack the port open to your local subnet once, or from an elevated PowerShell:
-
-```powershell
-New-NetFirewallRule -DisplayName "RemoteDesktopLAN" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8443 -RemoteAddress LocalSubnet
-```
-or run:
-```
-allowRemoteDesktopLAN.bat
-```
-
-Find the PC's LAN IP (`ipconfig`, the IPv4 line) and on the phone, same Wi-Fi, head to:
+From another device on the same Wi-Fi:
 
 ```
 https://<PC-LAN-IP>:8443
 ```
 
-First visit on each device throws a certificate warning. Tell it you trust yourself, and you're in.
-
-Want it to wake up when you log in?
+If Windows Firewall gets in the way, use **Advanced > Add/Repair LAN Firewall Rule** from the tray, or run:
 
 ```bat
-install-autostart.bat
-uninstall-autostart.bat
+allowRemoteDesktopLAN.bat
 ```
 
-## First run
+Another device may show a warning for the self-signed certificate the first time it connects.
 
-It'll ask you to set an admin password, 12 characters minimum. That password only ever exists as an Argon2id hash; the plaintext never touches the disk. From then on, that's your key in.
+## Direct remote access
 
-## Driving it
+LAN-only is the default.
 
-On a desktop it's exactly what your hands expect: move, click, scroll, type. The gear up in the top-left holds the controls: monitor, quality, FPS, full screen, Ctrl+Alt+Del, disconnect.
+If you want to connect while away from home, the tray can try UPnP/NAT-PMP or show the values needed for manual port forwarding. It is still a direct connection to your PC. There is no hosted relay or account service in the middle.
 
-On a phone:
+That also means your router and ISP get a vote. CGNAT may make incoming connections impossible, and opening a remote-control service to the internet deserves a strong, unique password. The app cannot magically route around either of those facts.
 
-| Gesture or control | What happens |
+## Phone controls
+
+| Control | What it does |
 |---|---|
-| One-finger drag | Cursor moves like a trackpad. Lift and re-plant your finger to keep going. |
-| Hold still about 1.4s | Cursor teleports to that spot |
-| Two fingers | Pinch to zoom, drag to pan |
-| Double-tap | Snaps the screen back to fit |
-| Mouse pad (✋) | Left and right click, a scroll strip, and a Hold latch for click-and-drag |
-| Keyboard (⌨) | On-screen keyboard with Shift, symbols, modifier combos, key repeat, and a strip that echoes what you've typed |
-| Sys keys (⌃) | Ctrl, Alt, Shift, Win that latch on, plus Del, PrtSc, Esc, Tab. Latch Shift to multi-select files, or latch Win and tap the arrows to snap windows. |
-| Arrows (⇅) | Arrow keys with hold-to-repeat |
-| Send file (📤) | Flings a file from the phone to the PC's Downloads |
+| One-finger drag | Moves the cursor like a trackpad |
+| Hold for about 1.4 seconds | Jumps the cursor to that point |
+| Two fingers | Zooms and pans |
+| Double-tap | Fits the desktop back to the screen |
+| Mouse pad | Left/right click, scroll, and click-drag |
+| Keyboard | Types text and shortcuts on the PC |
+| Sys keys | Ctrl, Alt, Shift, Win, Del, PrtSc, Esc, and Tab |
+| Send file | Saves a file into the PC's Downloads folder |
 
-Every floating panel drags wherever you like, and they scramble back on-screen if you rotate the phone instead of vanishing off the edge.
-
-## Screenshots
-
-<img width="611" height="263" alt="Regular" src="https://github.com/user-attachments/assets/9ad1c7f2-09e6-48ae-96e5-123e09bd840a" />
+<img width="611" height="263" alt="Regular view" src="https://github.com/user-attachments/assets/9ad1c7f2-09e6-48ae-96e5-123e09bd840a" />
 <img width="611" height="263" alt="Settings" src="https://github.com/user-attachments/assets/7aa876c3-9d09-4f3f-a61e-c985ed2bed12" />
-<img width="611" height="263" alt="Keyboard" src="https://github.com/user-attachments/assets/87b1d87b-5387-4756-affd-407456db5e08" />
-<img width="611" height="263" alt="SendToPC" src="https://github.com/user-attachments/assets/a69335ad-016a-4691-a45b-049934c748ba" />
+<img width="611" height="263" alt="Keyboard" src="https://github.com/user-attachments/assets/87b1d87b-5387-4756-123e09bd840a" />
+<img width="611" height="263" alt="Send to PC" src="https://github.com/user-attachments/assets/a69335ad-016a-4691-a45b-049934c748ba" />
 
+## A few honest limitations
 
+- GDI capture is simple and dependable, but high resolutions and FPS can use a fair bit of CPU.
+- UAC prompts and the Windows lock screen appear black because Windows protects that desktop.
+- Self-signed certificates are awkward on devices that have not trusted them yet.
+- Direct internet access cannot work through every router or ISP setup.
 
-## Where it keeps its stuff
-
-The config is a JSON file in the app's data folder: port, bind address, session timeout, and the remote-access on/off flag. The same folder holds the certificate, the password hash, and the audit log:
+Configuration, certificates, and logs live here:
 
 ```
 %LOCALAPPDATA%\RemoteDesktopLAN\
 ```
 
-Anything you send from a phone lands here:
+Uploaded files land here:
 
 ```
 %USERPROFILE%\Downloads\RemoteDesktopLAN\
 ```
 
-## Under the hood
-
-```
-  browser (viewer)
-       |  ^
-   WSS |  | JSON control
-       v  |
-  Kestrel / ASP.NET Core
-       |
-       +--> GDI screen capture (tile-delta)  ...frames fly back to the browser
-       |
-       +--> Win32 SendInput (mouse + keyboard)
-```
-
-`GdiScreenCapturer` grabs the screen the old-fashioned way with GDI, slices it into 128px tiles, hashes each with FNV-1a, and ships only the tiles that changed since last time, as JPEG. Every 7 seconds it forces a keyframe so a dropped tile can't sit there looking wrong forever. The cursor gets painted into the frame too, because a remote desktop where you can't see the pointer is just a screenshot.
-
-Frames travel over the WebSocket as raw binary; everything chatty (input, settings, ping) is JSON. HTTP/2 is switched off on purpose. Leave it on and the WebSocket upgrade quietly refuses to happen, which cost me an evening once.
-
-Input runs through `InputInjector`, a wrapper around `SendInput`. The mouse is mapped across the entire virtual desktop so your second and third monitors land in the right place, text goes in as Unicode, and the special keys and combos use virtual-key codes. A few keys (the Win key, the arrows) need the extended-key flag or Windows just shrugs and ignores them, so they get it.
-
-The whole capture side hides behind an `IScreenCapturer` interface. The day I get tired of GDI eating CPU and wire up something GPU-accelerated (Windows.Graphics.Capture plus H.264), nothing else in the app has to know.
-
-Worth knowing up front: it runs in your normal user session, so it can't see or touch the UAC secure desktop (the dimmed "are you sure" prompt) or the lock screen. Those come through as a black rectangle. That's Windows drawing a hard line, and I'm not going to pretend I can erase it.
-
-
-## Rough edges
-
-- **The capture eats CPU.** GDI plus JPEG is dead simple and drags in zero dependencies, but it isn't touching the GPU, so crank the resolution and FPS and your CPU will feel it. WGC plus H.264 is the eventual fix.
-- **The secure desktop stays secret.** UAC prompts and the lock screen come through pure black. Nothing I can do, that's the OS guarding the door.
-- **Self-signed cert.** One browser warning per device, then it leaves you alone.
-- **One user, one password.** No accounts, no roles, no sharing.
-- **Not internet-ready.** No reverse proxy, no fancy rate limiting, none of the armor you'd want facing the world. LAN. Only.
-- **Landscape on a small phone gets busy** if you fan out every panel at once.
-
-## Someday, maybe..!
-
-- Clipboard sync both directions, with a little history
-- Files going the other way, PC to phone
-- A tray app to toggle access and see (or boot) whoever's connected
-- GPU-accelerated capture (Windows.Graphics.Capture + H.264 / WebCodecs)
-
 ## License
 
-PolyForm Noncommercial 1.0.0. Use it, change it, share it, all good. Just don't sell it or build a business on it.
+PolyForm Noncommercial 1.0.0. Use it, change it, and share it. Just don't sell it or build a business on it.
 
-| Use | Change | Distribute | Noncommercial |
-|---|---|---|---|
-| Yes | Yes | Yes | Yes |
-
-Full text: https://polyformproject.org/licenses/noncommercial/1.0.0
+[Read the full license](https://polyformproject.org/licenses/noncommercial/1.0.0)

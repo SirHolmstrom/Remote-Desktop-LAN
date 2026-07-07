@@ -6,6 +6,7 @@ using Core.Capture;
 using Core.Config;
 using Core.Input;
 using Core.Logging;
+using Core.Security;
 
 namespace Core.Streaming;
 
@@ -24,14 +25,17 @@ public sealed class StreamSession : IDisposable
 {
     // Control state: written by the receive loop, read by the send loop. volatile
     // int/bool reads & writes are atomic and visible across threads — enough here.
-    private volatile int m_Quality = 70;    // 10..95
-    private volatile int m_Fps = 20;        // 1..30 (GDI is CPU-bound at high res)
+    private volatile int m_Quality;
+    private volatile int m_Fps;
     private volatile int m_Monitor = 0;
     private volatile bool m_ForceKeyframe = true; // resend a full frame after a control change
 
     private readonly WebSocket m_Socket;
     private readonly AppConfig m_Config;
     private readonly IScreenCapturer m_Capturer;
+    private readonly bool m_IsLanClient;
+    private readonly SessionPermissions m_Permissions;
+    private readonly Func<bool> m_IsAccessStillValid;
     private readonly CancellationTokenSource m_Cancellation;
     private readonly SemaphoreSlim m_SendLock = new(1, 1); // serialize ALL sends
 
@@ -44,16 +48,30 @@ public sealed class StreamSession : IDisposable
     public int Quality => m_Quality;
     public int Fps => m_Fps;
     public int Monitor => m_Monitor;
+    public SessionRole Role { get; }
+    public GuestAccessLevel? GuestAccessLevel { get; }
+    public Guid? GuestInviteId { get; }
 
     public StreamSession(
         WebSocket socket,
         AppConfig config,
         string clientIp,
+        bool isLanClient,
+        SessionInfo loginSession,
+        Func<bool> isAccessStillValid,
         CancellationToken outerToken)
     {
         m_Socket = socket;
         m_Config = config;
+        m_Quality = Math.Clamp(config.JpegQuality, 10, 95);
+        m_Fps = Math.Clamp(config.FpsLimit, 1, 60);
         ClientIp = clientIp;
+        m_IsLanClient = isLanClient;
+        Role = loginSession.Role;
+        GuestAccessLevel = loginSession.GuestAccessLevel;
+        GuestInviteId = loginSession.GuestInviteId;
+        m_Permissions = loginSession.Permissions;
+        m_IsAccessStillValid = isAccessStillValid;
         m_Capturer = new GdiScreenCapturer(); // per-session: avoids cross-thread bitmap races
         m_Cancellation = CancellationTokenSource.CreateLinkedTokenSource(outerToken);
     }
@@ -89,7 +107,15 @@ public sealed class StreamSession : IDisposable
 
         while (!ct.IsCancellationRequested && m_Socket.State == WebSocketState.Open)
         {
-            if (!m_Config.RemoteAccessEnabled) // host flipped the kill switch
+            if (!m_IsAccessStillValid())
+            {
+                await SendStatusAsync("access-revoked");
+                break;
+            }
+
+            // The tray switch closes Internet sessions only. LAN streaming remains
+            // available whenever the local host is running.
+            if (!m_IsLanClient && !m_Config.RemoteAccessEnabled)
             {
                 await SendStatusAsync("disabled");
                 break;
@@ -119,7 +145,7 @@ public sealed class StreamSession : IDisposable
                 catch { break; } // client gone
             }
 
-            int interval = 1000 / Math.Clamp(m_Fps, 1, 30);
+            int interval = 1000 / Math.Clamp(m_Fps, 1, 60);
             int elapsed = (int)(stopwatch.ElapsedMilliseconds - frameStart);
             int delay = interval - elapsed;
             if (delay > 0)
@@ -179,6 +205,7 @@ public sealed class StreamSession : IDisposable
                 // ----- input -----
                 case "move":
                 {
+                    if (!m_Permissions.CanControl) break;
                     var monitor = m_Capturer.GetMonitors().FirstOrDefault(x => x.Index == m_Monitor)
                                   ?? m_Capturer.GetMonitors()[0];
                     int pixelX = monitor.X + (int)(message["x"].GetDouble() * monitor.Width);
@@ -186,12 +213,31 @@ public sealed class StreamSession : IDisposable
                     InputInjector.MoveMouseAbsolute(pixelX, pixelY);
                     break;
                 }
-                case "btn": InputInjector.MouseButton(message["b"].GetString()!, message["d"].GetBoolean()); break;
-                case "scroll": InputInjector.Scroll(message["delta"].GetInt32()); break;
-                case "key": InputInjector.Key((ushort)message["vk"].GetInt32(), message["d"].GetBoolean()); break;
-                case "text": InputInjector.TypeUnicode(message["s"].GetString() ?? ""); break;
+                case "btn":
+                    if (m_Permissions.CanControl)
+                        InputInjector.MouseButton(message["b"].GetString()!, message["d"].GetBoolean());
+                    break;
+                case "scroll":
+                    if (m_Permissions.CanControl) InputInjector.Scroll(message["delta"].GetInt32());
+                    break;
+                case "key":
+                {
+                    ushort virtualKey = (ushort)message["vk"].GetInt32();
+                    if (m_Permissions.CanControl
+                        && (m_Permissions.CanUseSystemKeys || !IsSystemKey(virtualKey)))
+                        InputInjector.Key(virtualKey, message["d"].GetBoolean());
+                    break;
+                }
+                case "text":
+                    if (m_Permissions.CanControl)
+                    {
+                        string text = message["s"].GetString() ?? "";
+                        InputInjector.TypeUnicode(text[..Math.Min(text.Length, 4096)]);
+                    }
+                    break;
                 case "combo":
                 {
+                    if (!m_Permissions.CanUseSystemKeys) break;
                     var modifiers = message["mods"].EnumerateArray().Select(e => (ushort)e.GetInt32()).ToArray();
                     InputInjector.KeyCombo(modifiers, (ushort)message["key"].GetInt32());
                     break;
@@ -199,7 +245,7 @@ public sealed class StreamSession : IDisposable
 
                 // ----- live controls -----
                 case "quality": m_Quality = Math.Clamp(message["v"].GetInt32(), 10, 95); m_ForceKeyframe = true; break;
-                case "fps": m_Fps = Math.Clamp(message["v"].GetInt32(), 1, 30); break;
+                case "fps": m_Fps = Math.Clamp(message["v"].GetInt32(), 1, 60); break;
                 case "monitor":
                 {
                     int index = message["v"].GetInt32();
@@ -218,6 +264,7 @@ public sealed class StreamSession : IDisposable
                 // ----- read focused field text (UI Automation), for the keyboard echo -----
                 case "getFocusText":
                 {
+                    if (!m_Permissions.CanControl) break;
                     var focusText = FocusedText.TryRead();
                     if (focusText != null) await SendTextAsync(new { t = "focusText", text = focusText }, ct);
                     break;
@@ -225,6 +272,15 @@ public sealed class StreamSession : IDisposable
             }
         }
     }
+
+    private static bool IsSystemKey(ushort virtualKey) => virtualKey is
+        0x11 or // Ctrl
+        0x12 or // Alt
+        0x2C or // Print Screen
+        0x5B or // Left Windows
+        0x5C or // Right Windows
+        0x5D    // Application/Menu
+        || virtualKey is >= 0x70 and <= 0x87; // F1..F24
 
     // ---------- send helpers (all sends serialized through m_SendLock) ----------
     private async Task SendRawAsync(ReadOnlyMemory<byte> data, WebSocketMessageType type, CancellationToken ct)

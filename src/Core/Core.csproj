@@ -2,18 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Core</RootNamespace>
-    <AssemblyName>RemoteDesktopLAN.Core</AssemblyName>
+    <AssemblyName>RemoteDesktopLAN</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <!-- Pulls in System.Windows.Automation (UI Automation client) so the server can
          read the focused field's text for the keyboard echo. -->
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
+    <PackageReference Include="Open.Nat.V2" Version="3.2.1" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.6" />
     <!-- DPAPI (ProtectedData/DataProtectionScope) is not in the base library on
          modern .NET — it ships as this Windows-only package. -->
@@ -31,6 +35,7 @@
     <Content Include="web\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <EmbeddedResource Include="Assets\*.ico" />
   </ItemGroup>
 
 </Project>

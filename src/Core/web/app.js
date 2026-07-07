@@ -9,6 +9,28 @@ const kbdBtn = document.getElementById('kbdBtn');
 
 let ws, pingTimer;
 let queue = [], processing = false;
+let sessionInfo = null;
+
+function applySessionInfo(info) {
+  sessionInfo = info;
+  const permissions = info.permissions || {};
+  const allowed = {
+    control: !!permissions.canControl,
+    system: !!permissions.canUseSystemKeys,
+    files: !!permissions.canTransferFiles,
+  };
+  document.querySelectorAll('[data-requires]').forEach(element => {
+    element.classList.toggle('permission-hidden', !allowed[element.dataset.requires]);
+  });
+  if (!allowed.control) {
+    document.getElementById('pad').classList.add('hidden');
+    document.getElementById('vkbd').classList.remove('show');
+    document.getElementById('arrows').classList.add('hidden');
+  }
+  if (!allowed.system) document.getElementById('syskeys').classList.add('hidden');
+  const role = info.role === 'guest' ? `guest · ${info.accessLevel}` : 'owner';
+  document.getElementById('sessionRole').textContent = role;
+}
 
 // ---------------- zoom / pan ----------------
 let scale = 1, minScale = 1, tx = 0, ty = 0;
@@ -82,7 +104,13 @@ function handleControl(m) {
   switch (m.t) {
     case 'pong': latEl.textContent = Math.round(performance.now() - m.ts) + ' ms'; break;
     case 'monitors': fillMonitors(m.list, m.active); break;
-    case 'status': setStatus(m.state === 'disabled' ? 'disabled by host' : m.state, m.state === 'connected' ? 'ok' : 'bad'); break;
+    case 'status': {
+      const label = m.state === 'disabled' ? 'disabled by host'
+        : m.state === 'access-revoked' ? 'guest access ended'
+        : m.state;
+      setStatus(label, m.state === 'connected' ? 'ok' : 'bad');
+      break;
+    }
     // real text of the PC's focused field (UI Automation) → seed the echo so it matches reality
     case 'focusText': echoBuf = (m.text || '').slice(-5000); echoRender(); break;
   }
@@ -354,6 +382,7 @@ function buildKeyboard() {
   for (const row of LAYERS[kbLayer]) {
     const r = document.createElement('div'); r.className = 'krow';
     for (const k of row) {
+      if (!sessionInfo?.permissions?.canUseSystemKeys && (k === 'ctrl' || k === 'alt' || k === 'win')) continue;
       const b = document.createElement('div');
       let cls = 'key';
       if (WIDE.has(k)) cls += ' wide';
@@ -582,6 +611,7 @@ async function start() {
   try {
     const r = await fetch('/api/session', { cache: 'no-store' });
     if (r.status !== 200) { location.href = '/login.html'; return; }
+    applySessionInfo(await r.json());
   } catch (e) { location.href = '/login.html'; return; }
   connect();
 }

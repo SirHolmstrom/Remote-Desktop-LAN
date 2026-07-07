@@ -15,6 +15,7 @@ public static class AppPaths
     public static string CertPfx => Path.Combine(Root, "certs", "server.pfx");
     public static string CertPwd => Path.Combine(Root, "certs", "server.pwd"); // DPAPI-protected
     public static string AuditLog => Path.Combine(Root, "logs", "audit.log");
+    public static string ConfigFolder => Root;
 
     /// <summary>Where files uploaded from clients are saved.</summary>
     public static string Inbox => Path.Combine(

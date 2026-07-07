@@ -1,6 +1,7 @@
 # Build output
 bin/
 obj/
+artifacts/
 *.user
 
 # Runtime-generated secrets & data (these live in %LOCALAPPDATA% at run time,
