@@ -2,7 +2,7 @@
 
 <img width="2560" height="1280" alt="image" src="https://github.com/user-attachments/assets/c2ea8eb0-9a0c-44ca-945b-bd7240354bf0" />
 
-**CouchDesk** :Your Windows PC in a browser tab, run it on the PC, open a browser, and connect. There is no client to install on the other device, not account creation and nothing is relayed through somebody else's servers.
+**CouchDesk** : Your Windows PC in a browser tab, run it on your PC, open a browser, and connect. There is no client to install on the other device, not account creation and nothing is relayed through somebody else's servers.
 
 ## What it does
 
