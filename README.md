@@ -1,4 +1,4 @@
-# Remote Desktop LAN
+# CouchDesk
 
 Your Windows PC in a browser tab.
 
